@@ -1,0 +1,21 @@
+# Dépendances et fichiers générés (réinstallés par npm install / flutter pub get)
+node_modules/
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.idea/
+*.iml
+
+# Données locales et secrets
+backend/data/
+backend/.env
+backend/firebase-compte-service.json
+*.db
+*.db-wal
+*.db-shm
+
+# Système
+.DS_Store
+Thumbs.db
+*.log

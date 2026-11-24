@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Carte – Canne Proche</title>
+<!--
+  Carte Google Maps affichée DANS l'application mobile Flutter (vue web intégrée sur
+  Android/iOS, cadre iframe en version web). L'application envoie ce qu'il faut
+  dessiner (cercles, tracés, marqueurs) et les mouvements de caméra ; la page lui
+  renvoie les touchers et les gestes. Les marqueurs reproduisent ceux de l'application.
+
+  Messages reçus  : { cmd: 'couches' | 'deplacer' | 'ajuster' | 'satellite', ... }
+  Messages envoyés : { type: 'pret' | 'touche' | 'geste' | 'erreur', id, ... }
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+  html, body, #carte { margin: 0; padding: 0; width: 100%; height: 100%; background: #E5E7EB; overflow: hidden; }
+  body { font-family: Inter, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .m { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+  .personne { box-sizing: border-box; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; box-shadow: 0 3px 10px rgba(15,23,42,.30); position: relative; }
+  .personne .direct { position: absolute; right: -1px; bottom: -1px; box-sizing: border-box; border-radius: 50%; border: 3px solid #fff; }
+  .sous { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+  .etiquette-heure { background: #334155; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; }
+  .icone { width: 40px; height: 40px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(15,23,42,.18); }
+  .icone .material-icons-round { font-size: 22px; }
+  .rond { box-sizing: border-box; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25); color: #fff; }
+  .point { box-sizing: border-box; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 14px rgba(15,23,42,.18); }
+  .zone { background: #fff; border-radius: 8px; padding: 3px 8px; font-size: 11px; font-weight: 600; max-width: 154px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 4px rgba(15,23,42,.15); }
+  #erreur { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center;
+    padding: 24px; color: #334155; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="carte" role="application" aria-label="Carte"></div>
+<div id="erreur"></div>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var ID = params.get('id') || 'carte';
+  var initial = {
+    lat: parseFloat(params.get('lat')) || 6.1319,
+    lng: parseFloat(params.get('lng')) || 1.2228,
+    zoom: parseFloat(params.get('zoom')) || 15,
+    interactive: params.get('interactive') !== '0',
+    satellite: params.get('satellite') === '1',
+  };
+
+  // --- Communication avec l'application -------------------------------------------
+  function envoyer(objet) {
+    objet.id = ID;
+    var texte = JSON.stringify(objet);
+    if (window.Flutter && window.Flutter.postMessage) window.Flutter.postMessage(texte); // Android / iOS
+    else if (window.parent && window.parent !== window) window.parent.postMessage(texte, '*'); // version web
+  }
+  var attente = [];
+  var carte = null;
+  window.recevoir = function (cmd) {
+    if (typeof cmd === 'string') { try { cmd = JSON.parse(cmd); } catch (e) { return; } }
+    if (!cmd || !cmd.cmd) return;
+    if (!carte) { attente.push(cmd); return; }
+    traiter(cmd);
+  };
+  window.addEventListener('message', function (e) { window.recevoir(e.data); });
+
+  function erreur(message) {
+    var el = document.getElementById('erreur');
+    el.textContent = message;
+    el.style.display = 'flex';
+    envoyer({ type: 'erreur', message: message });
+  }
+
+  // --- Chargement de Google Maps ----------------------------------------------------
+  window.gm_authFailure = function () { erreur('Clé Google Maps refusée ou quota du jour atteint.'); };
+  var delai = setTimeout(function () { if (!carte) erreur('Google Maps ne répond pas.'); }, 12000);
+
+  fetch('/api/public/config-carte', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (conf) {
+      if (conf.fournisseur !== 'google' || !conf.cleGoogle) { erreur('Aucune clé Google Maps configurée.'); return; }
+      window.__pret = demarrer;
+      var s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(conf.cleGoogle) +
+        '&callback=__pret&v=weekly&language=fr&region=TG&loading=async';
+      s.async = true;
+      s.onerror = function () { erreur('Impossible de charger Google Maps.'); };
+      document.head.appendChild(s);
+    })
+    .catch(function () { erreur('Serveur injoignable.'); });
+
+  var g = null, Superposition = null;
+  var objets = [];
+
+  function demarrer() {
+    clearTimeout(delai);
+    g = google.maps;
+    carte = new g.Map(document.getElementById('carte'), {
+      center: { lat: initial.lat, lng: initial.lng },
+      zoom: initial.zoom,
+      minZoom: 3,
+      maxZoom: 20,
+      disableDefaultUI: true,
+      clickableIcons: false,
+      keyboardShortcuts: false,
+      gestureHandling: initial.interactive ? 'greedy' : 'none',
+      mapTypeId: initial.satellite ? 'hybrid' : 'roadmap',
+      tilt: 0,
+      heading: 0,
+      rotateControl: false,
+    });
+    carte.addListener('click', function (e) {
+      envoyer({ type: 'touche', lat: e.latLng.lat(), lng: e.latLng.lng() });
+    });
+    carte.addListener('dragstart', function () { envoyer({ type: 'geste' }); });
+
+    Superposition = function (donnees) { this.d = donnees; this.div = null; };
+    Superposition.prototype = new g.OverlayView();
+    Superposition.prototype.onAdd = function () {
+      this.div = document.createElement('div');
+      this.div.className = 'm';
+      this.div.innerHTML = htmlMarqueur(this.d);
+      this.getPanes().overlayLayer.appendChild(this.div);
+    };
+    Superposition.prototype.draw = function () {
+      var pt = this.getProjection().fromLatLngToDivPixel(new g.LatLng(this.d.lat, this.d.lng));
+      if (pt && this.div) { this.div.style.left = pt.x + 'px'; this.div.style.top = pt.y + 'px'; }
+    };
+    Superposition.prototype.onRemove = function () { if (this.div) this.div.remove(); this.div = null; };
+
+    var file = attente; attente = [];
+    file.forEach(traiter);
+    envoyer({ type: 'pret' });
+  }
+
+  // --- Marqueurs (mêmes dessins que dans l'application) ----------------------------
+  function echapper(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function htmlMarqueur(d) {
+    switch (d.type) {
+      case 'personne': {
+        var t = d.taille || 52;
+        var bordure = d.enDirect ? 4 : 3;
+        var html = '<div class="personne" style="width:' + t + 'px;height:' + t + 'px;background:' + d.couleur +
+          ';border:' + bordure + 'px solid #fff;font-size:' + (t * 0.3) + 'px">' + echapper(d.initiales);
+        if (d.pastille) {
+          var p = t * 0.3;
+          html += '<span class="direct" style="width:' + p + 'px;height:' + p + 'px;background:' + d.pastille + '"></span>';
+        }
+        html += '</div>';
+        if (d.etiquette) {
+          html += '<div class="sous etiquette-heure" style="top:' + (t + 6) + 'px">' + echapper(d.etiquette) + '</div>';
+        }
+        return html;
+      }
+      case 'icone':
+        return '<div class="icone"><span class="material-icons-round" style="color:' + d.couleur + '">' + echapper(d.icone) + '</span></div>';
+      case 'rond': {
+        var r = d.taille || 44;
+        return '<div class="rond" style="width:' + r + 'px;height:' + r + 'px;background:' + d.couleur + '">' +
+          '<span class="material-icons-round" style="font-size:' + (r * 0.55) + 'px">' + echapper(d.icone) + '</span></div>';
+      }
+      case 'point': {
+        var s = d.taille || 22;
+        return '<div class="point" style="width:' + s + 'px;height:' + s + 'px;background:' + d.couleur + '"></div>';
+      }
+      case 'etiquette':
+        return '<div class="zone" style="color:' + d.couleur + '">' + echapper(d.texte) + '</div>';
+      default:
+        return '';
+    }
+  }
+
+  // --- Commandes -----------------------------------------------------------------------
+  function effacer() {
+    objets.forEach(function (o) { o.setMap(null); });
+    objets = [];
+  }
+  function dessiner(c) {
+    effacer();
+    (c.cercles || []).forEach(function (x) {
+      objets.push(new g.Circle({
+        map: carte, center: { lat: x.lat, lng: x.lng }, radius: x.rayon, clickable: false,
+        fillColor: x.remplissage, fillOpacity: x.opaciteRemplissage,
+        strokeColor: x.bord, strokeOpacity: x.opaciteBord, strokeWeight: x.epaisseur,
+      }));
+    });
+    (c.traces || []).forEach(function (x) {
+      objets.push(new g.Polyline({
+        map: carte, clickable: false,
+        path: x.points.map(function (p) { return { lat: p[0], lng: p[1] }; }),
+        strokeColor: x.couleur, strokeOpacity: x.opacite, strokeWeight: x.epaisseur,
+      }));
+    });
+    (c.marqueurs || []).forEach(function (x) {
+      var o = new Superposition(x);
+      o.setMap(carte);
+      objets.push(o);
+    });
+  }
+  function ajuster(c) {
+    var pts = c.points || [];
+    if (!pts.length) return;
+    var zoomMax = c.zoomMax || 17;
+    if (pts.length === 1) { carte.setCenter({ lat: pts[0][0], lng: pts[0][1] }); carte.setZoom(zoomMax); return; }
+    var b = new g.LatLngBounds();
+    pts.forEach(function (p) { b.extend({ lat: p[0], lng: p[1] }); });
+    if (b.getNorthEast().equals(b.getSouthWest())) { carte.setCenter(b.getCenter()); carte.setZoom(zoomMax); return; }
+    var m = c.marge || {};
+    carte.fitBounds(b, { top: m.haut || 40, right: m.droite || 40, bottom: m.bas || 40, left: m.gauche || 40 });
+    g.event.addListenerOnce(carte, 'idle', function () { if (carte.getZoom() > zoomMax) carte.setZoom(zoomMax); });
+  }
+  function traiter(c) {
+    switch (c.cmd) {
+      case 'couches': dessiner(c); break;
+      case 'deplacer':
+        carte.setCenter({ lat: c.lat, lng: c.lng });
+        if (c.zoom != null) carte.setZoom(c.zoom);
+        break;
+      case 'ajuster': ajuster(c); break;
+      case 'satellite': carte.setMapTypeId(c.valeur ? 'hybrid' : 'roadmap'); break;
+      default: break;
+    }
+  }
+})();
+</script>
+</body>
+</html>

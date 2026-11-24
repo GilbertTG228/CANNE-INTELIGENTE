@@ -1,0 +1,33 @@
+# Déploiement du serveur sur Render (adresse HTTPS permanente, nécessaire pour
+# que le GPS du téléphone de test fonctionne dans le navigateur).
+# Render › New › Blueprint › choisir ce dépôt, puis renseigner les valeurs « sync: false ».
+services:
+  - type: web
+    name: canne-proche
+    runtime: node
+    rootDir: backend
+    plan: starter            # le disque persistant (base SQLite) exige une offre payante
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/sante
+    disk:
+      name: donnees
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DB_PATH
+        value: /var/data/canne.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DONNEES_DEMO
+        value: "false"
+      - key: URL_PUBLIQUE
+        sync: false          # ex. https://canne-proche.onrender.com
+      - key: ADMIN_TELEPHONE
+        sync: false
+      - key: ADMIN_MOT_DE_PASSE
+        sync: false

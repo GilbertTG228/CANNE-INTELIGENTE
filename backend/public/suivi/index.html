@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Suivi en direct · Canne Proche</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    :root {
+      --primaire: #4338CA; --primaire-fond: #EEF0FF; --texte: #0F172A; --texte-2: #475569;
+      --surface: #F5F6FA; --carte: #FFFFFF; --bordure: #E2E8F0;
+      --ok: #16A34A; --ok-fond: #DCFCE7; --ok-texte: #166534;
+      --avert: #EA580C; --avert-fond: #FFEDD5; --avert-texte: #9A3412;
+      --crit: #DC2626; --crit-fond: #FEE2E2; --crit-texte: #991B1B;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primaire: #A5B4FC; --primaire-fond: #1E1B4B; --texte: #E2E8F0; --texte-2: #A8B4C8;
+        --surface: #0B1220; --carte: #111A2E; --bordure: #25324A;
+        --ok: #4ADE80; --ok-fond: #12301F; --ok-texte: #86EFAC;
+        --avert: #FB923C; --avert-fond: #3A2314; --avert-texte: #FDBA74;
+        --crit: #F87171; --crit-fond: #3F1A1A; --crit-texte: #FCA5A5;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--surface); color: var(--texte); display: flex; flex-direction: column;
+    }
+    header {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      background: var(--carte); border-bottom: 1px solid var(--bordure);
+    }
+    .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--primaire); display: grid; place-items: center; flex: none; }
+    .logo svg { width: 24px; height: 24px; fill: #fff; }
+    header h1 { font-size: 1.05rem; margin: 0; }
+    header p { margin: 2px 0 0; font-size: .85rem; color: var(--texte-2); }
+    main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    #carte { flex: 1; min-height: 320px; background: var(--primaire-fond); }
+    .panneau {
+      background: var(--carte); border-top: 1px solid var(--bordure); padding: 16px 18px 20px;
+      display: grid; gap: 12px;
+    }
+    .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pastille { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: .9rem; }
+    .pastille::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .ok { background: var(--ok-fond); color: var(--ok-texte); }
+    .avert { background: var(--avert-fond); color: var(--avert-texte); }
+    .crit { background: var(--crit-fond); color: var(--crit-texte); }
+    .neutre { background: var(--primaire-fond); color: var(--primaire); }
+    .info { font-size: .95rem; color: var(--texte-2); margin: 0; }
+    .info strong { color: var(--texte); }
+    a.bouton {
+      display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px;
+      border-radius: 12px; background: var(--primaire); color: #fff; font-weight: 600; text-decoration: none;
+    }
+    @media (prefers-color-scheme: dark) { a.bouton { color: #1E1B4B; } }
+    .etat { flex: 1; display: grid; place-items: center; text-align: center; padding: 32px; }
+    .etat h2 { margin: 12px 0 6px; }
+    .etat p { color: var(--texte-2); max-width: 420px; margin: 0 auto; }
+    .repli { flex: 1; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--texte-2); }
+    .marqueur { width: 22px; height: 22px; border-radius: 50%; background: var(--primaire); border: 4px solid #fff; box-shadow: 0 0 0 6px rgba(67,56,202,.25); }
+    @media (min-width: 900px) {
+      main { flex-direction: row; }
+      .panneau { width: 380px; border-top: 0; border-left: 1px solid var(--bordure); align-content: start; order: 2; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg>
+    </div>
+    <div>
+      <h1 id="titre">Suivi en direct</h1>
+      <p>Lien temporaire partagé depuis l'application Canne Proche</p>
+    </div>
+  </header>
+
+  <main id="contenu" aria-live="polite">
+    <div class="etat"><p>Chargement…</p></div>
+  </main>
+
+  <script src="/commun/carte-google.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var jeton = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
+    var contenu = document.getElementById('contenu');
+    var carte = null, marqueur = null, cercle = null, premierCentrage = true, leafletPret = null;
+
+    function echapper(t) {
+      return String(t).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function ilYa(iso) {
+      var s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+      if (s < 60) return "à l'instant";
+      var m = Math.round(s / 60);
+      if (m < 60) return 'il y a ' + m + ' min';
+      var h = Math.floor(m / 60);
+      if (h < 24) return 'il y a ' + h + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '');
+      return 'le ' + new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+    function heure(iso) {
+      return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Fond de carte : Google Maps si le serveur a une clé, sinon OpenStreetMap (Leaflet).
+    // Sans Internet, on affiche les coordonnées à la place.
+    function chargerLeaflet() {
+      if (!window.ChargeurCarte) return Promise.resolve(!!window.L);
+      return window.ChargeurCarte.charger().then(function (f) { return !!f; });
+    }
+
+    function afficherErreur(titre, message) {
+      contenu.innerHTML = '<div class="etat"><div><h2>' + echapper(titre) + '</h2><p>' + echapper(message) + '</p></div></div>';
+      carte = null;
+    }
+
+    function structure() {
+      if (document.getElementById('panneau')) return;
+      contenu.innerHTML = '<div id="carte" role="region" aria-label="Carte de la position"></div><section class="panneau" id="panneau"></section>';
+    }
+
+    async function afficherCarte(p) {
+      var zone = document.getElementById('carte');
+      var avecCarte = await chargerLeaflet();
+      if (!avecCarte) {
+        zone.className = 'repli';
+        zone.innerHTML = '<div><p>Carte indisponible (pas de connexion Internet).</p><p><strong>' +
+          p.latitude.toFixed(5) + ', ' + p.longitude.toFixed(5) + '</strong></p></div>';
+        return;
+      }
+      var pos = [p.latitude, p.longitude];
+      if (!carte) {
+        carte = L.map(zone, { zoomControl: true }).setView(pos, 17);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19, attribution: '&copy; contributeurs OpenStreetMap',
+        }).addTo(carte);
+        marqueur = L.marker(pos, { icon: L.divIcon({ className: '', html: '<div class="marqueur"></div>', iconSize: [22, 22] }) }).addTo(carte);
+        cercle = L.circle(pos, { radius: p.precision || 10, color: '#1D4ED8', weight: 1, fillOpacity: 0.12 }).addTo(carte);
+      } else {
+        marqueur.setLatLng(pos);
+        cercle.setLatLng(pos).setRadius(p.precision || 10);
+        if (premierCentrage) carte.setView(pos);
+      }
+      premierCentrage = false;
+    }
+
+    async function actualiser() {
+      var r;
+      try {
+        r = await fetch('/api/public/suivi/' + encodeURIComponent(jeton), { cache: 'no-store' });
+      } catch (e) {
+        if (!document.getElementById('panneau')) afficherErreur('Serveur injoignable', 'Vérifiez votre connexion. Nouvel essai automatique…');
+        return;
+      }
+      var json = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        arreter();
+        afficherErreur(r.status === 410 ? 'Lien plus valable' : 'Lien invalide',
+          (json.message || 'Ce lien de suivi n\'est plus valable.') + ' Demandez un nouveau lien à la personne qui vous l\'a envoyé.');
+        return;
+      }
+      structure();
+      document.getElementById('titre').textContent = 'Suivi de ' + json.canne.nom;
+      document.title = 'Suivi de ' + json.canne.nom + ' · Canne Proche';
+      var p = json.position;
+      var html = '<div class="ligne">';
+      html += json.enLigne ? '<span class="pastille ok">En ligne</span>' : '<span class="pastille avert">Hors ligne</span>';
+      if (json.canne.batterie != null) {
+        var b = json.canne.batterie;
+        html += '<span class="pastille ' + (b <= 20 ? 'crit' : b <= 40 ? 'avert' : 'neutre') + '">Batterie ' + b + ' %</span>';
+      }
+      html += '</div>';
+      if (p) {
+        html += '<p class="info">Dernière position <strong>' + ilYa(p.horodatage) + '</strong> (' + heure(p.horodatage) + ')' +
+          (p.precision ? ', précision ± ' + Math.round(p.precision) + ' m' : '') + '.</p>';
+        html += '<a class="bouton" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + p.latitude +
+          '&mlon=' + p.longitude + '#map=18/' + p.latitude + '/' + p.longitude + '">Itinéraire / ouvrir la carte</a>';
+      } else {
+        html += '<p class="info">Aucune position reçue pour le moment.</p>';
+      }
+      html += '<p class="info">Ce lien expire à <strong>' + heure(json.expireLe) + '</strong> (' +
+        new Date(json.expireLe).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + '). Actualisation automatique toutes les 15 s.</p>';
+      document.getElementById('panneau').innerHTML = html;
+      if (p) afficherCarte(p);
+      else document.getElementById('carte').innerHTML = '';
+    }
+
+    var minuteur = setInterval(actualiser, 15000);
+    function arreter() { clearInterval(minuteur); }
+    actualiser();
+  })();
+  </script>
+</body>
+</html>

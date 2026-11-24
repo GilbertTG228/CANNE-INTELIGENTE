@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Console · Canne Proche</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Icônes (trait 2 px), utilisées avec <svg class="ic"><use href="#i-…"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-tableau" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+    <symbol id="i-carte" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><path d="M9 3v15M15 6v15"/></symbol>
+    <symbol id="i-canne" viewBox="0 0 24 24"><path d="M14 3c2.2 0 4 1.8 4 4v1"/><path d="M14 3 7 21"/><circle cx="18" cy="10" r="1.5"/></symbol>
+    <symbol id="i-proches" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-bouclier" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-horloge" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-cloche" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-batterie" viewBox="0 0 24 24"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/></symbol>
+    <symbol id="i-cadenas" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-lecture" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+    <symbol id="i-journal" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-loupe" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-sortie" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-actualiser" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-triangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M12 20h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  </svg>
+
+  <!-- Connexion -->
+  <section id="ecran-connexion" class="ecran-connexion" hidden>
+    <div class="connexion-marque">
+      <div class="marque"><span class="logo">CP</span><div><strong>Canne Proche</strong><small>Console d'administration</small></div></div>
+      <div>
+        <h1>Supervisez les cannes intelligentes et les proches qui les suivent.</h1>
+        <ul>
+          <li><svg class="ic"><use href="#i-carte"/></svg>Position et état de chaque canne en temps réel</li>
+          <li><svg class="ic"><use href="#i-bouclier"/></svg>Zones dangereuses et alertes centralisées</li>
+          <li><svg class="ic"><use href="#i-proches"/></svg>Comptes, associations et droits d'accès</li>
+        </ul>
+      </div>
+      <p>Les données de démonstration sont signalées par le badge « démo ».</p>
+    </div>
+    <div class="connexion-formulaire">
+      <form id="form-connexion" class="connexion" novalidate>
+        <h2>Connexion</h2>
+        <p class="sous">Accès réservé aux administrateurs. Les proches utilisent l'application mobile.</p>
+        <label>Numéro de téléphone
+          <input name="telephone" type="tel" autocomplete="username" required>
+        </label>
+        <label>Mot de passe
+          <input name="motDePasse" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="erreur" id="erreur-connexion" role="alert" hidden></p>
+        <button class="bouton primaire" type="submit" style="min-height:48px">Se connecter</button>
+        <p class="aide">Compte de démonstration : <code>90000000</code> / <code>Admin@2026</code></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- Application -->
+  <div id="application" class="application" hidden>
+    <aside class="menu">
+      <div class="marque"><span class="logo"><svg class="ic" aria-hidden="true"><use href="#i-canne"/></svg></span><div class="libelle"><strong>Canne Proche</strong><small>Console d'administration</small></div></div>
+      <nav aria-label="Menu de la console">
+        <button data-onglet="tableau" title="Tableau de bord"><svg class="ic"><use href="#i-tableau"/></svg><span class="libelle">Tableau de bord</span></button>
+        <button data-onglet="cannes" title="Cannes intelligentes"><svg class="ic"><use href="#i-canne"/></svg><span class="libelle">Cannes intelligentes</span></button>
+        <button data-onglet="utilisateurs" title="Utilisateurs"><svg class="ic"><use href="#i-proches"/></svg><span class="libelle">Utilisateurs</span></button>
+        <button data-onglet="cartographie" title="Cartographie"><svg class="ic"><use href="#i-carte"/></svg><span class="libelle">Cartographie</span></button>
+        <button data-onglet="zones" title="Zones dangereuses"><svg class="ic"><use href="#i-bouclier"/></svg><span class="libelle">Zones dangereuses</span></button>
+        <button data-onglet="historique" title="Historique"><svg class="ic"><use href="#i-horloge"/></svg><span class="libelle">Historique</span></button>
+        <button data-onglet="alertes" title="Alertes"><svg class="ic"><use href="#i-cloche"/></svg><span class="libelle">Alertes</span><span class="compteur" id="compteur-alertes" hidden></span></button>
+        <button data-onglet="maintenance" title="Maintenance"><svg class="ic"><use href="#i-batterie"/></svg><span class="libelle">Maintenance</span></button>
+        <button data-onglet="administrateurs" title="Administrateurs"><svg class="ic"><use href="#i-cadenas"/></svg><span class="libelle">Administrateurs</span></button>
+        <button data-onglet="simulateur" title="Simulateur (démo)"><svg class="ic"><use href="#i-lecture"/></svg><span class="libelle">Simulateur (démo)</span></button>
+        <button data-onglet="journal" title="Journal d'audit"><svg class="ic"><use href="#i-journal"/></svg><span class="libelle">Journal d'audit</span></button>
+      </nav>
+    </aside>
+
+    <main>
+      <!-- Tableau de bord ------------------------------------------------------- -->
+      <section data-panneau="tableau" hidden>
+        <div class="entete">
+          <div><h1>Tableau de bord</h1><p class="sous" id="maj-tableau"></p></div>
+          <div class="barre-compte" id="barre-compte">
+            <form class="recherche" id="form-recherche" role="search">
+              <svg class="ic"><use href="#i-loupe"/></svg>
+              <input type="search" id="recherche-globale" placeholder="Rechercher une canne, un proche…" aria-label="Rechercher une canne ou un proche">
+            </form>
+            <div class="compte">
+              <span class="avatar doux" id="avatar-admin">AD</span>
+              <span class="nom" id="nom-admin">Administrateur</span>
+              <button class="bouton discret petit" id="deconnexion" title="Se déconnecter" aria-label="Se déconnecter"><svg class="ic"><use href="#i-sortie"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="kpis" id="kpis"></div>
+        <div class="grille-2">
+          <div class="carte avec-carte">
+            <div class="titre-carte"><h2>Vue d'ensemble</h2><button class="lien" data-aller="cartographie">Ouvrir la cartographie</button></div>
+            <div id="carte-ensemble" class="carte-leaflet"></div>
+          </div>
+          <div class="carte">
+            <div class="titre-carte"><h2>Alertes récentes</h2><button class="lien" data-aller="alertes">Tout voir</button></div>
+            <div class="contenu"><div id="alertes-recentes" class="liste"></div></div>
+          </div>
+        </div>
+        <div class="carte">
+          <div class="titre-carte"><h2>État des cannes</h2><button class="bouton primaire petit" data-nouvelle-canne><svg class="ic"><use href="#i-plus"/></svg>Enregistrer une canne</button></div>
+          <div class="table-defilante">
+            <table>
+              <thead><tr><th>Canne</th><th>Personne</th><th>État</th><th>Batterie</th><th>Dernier signal</th><th>Proche principal</th></tr></thead>
+              <tbody id="table-etat"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cartographie ---------------------------------------------------------- -->
+      <section data-panneau="cartographie" hidden>
+        <div class="cartographie">
+          <div class="panneau">
+            <div class="tete">
+              <h1 style="font-size:20px">Cannes</h1>
+              <div class="recherche recherche-grise"><svg class="ic"><use href="#i-loupe"/></svg><input type="search" id="recherche-carto" placeholder="Identifiant ou nom" aria-label="Rechercher une canne"></div>
+              <div class="puces petites" id="filtres-carto">
+                <button class="puce" data-filtre="toutes" aria-pressed="true">Toutes <span data-compte="toutes"></span></button>
+                <button class="puce" data-filtre="en-ligne" aria-pressed="false" style="color:var(--ok-texte)">En ligne <span data-compte="en-ligne"></span></button>
+                <button class="puce" data-filtre="hors-ligne" aria-pressed="false" style="color:var(--avert-texte)">Hors ligne <span data-compte="hors-ligne"></span></button>
+              </div>
+            </div>
+            <div class="liste-cannes" id="liste-carto"></div>
+          </div>
+          <div class="zone-carte">
+            <div id="carte-principale" class="carte-leaflet"></div>
+            <article class="carte fiche" id="fiche-canne" hidden></article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cannes ---------------------------------------------------------------- -->
+      <section data-panneau="cannes" hidden>
+        <div class="entete">
+          <div><h1>Cannes intelligentes</h1><p class="sous">Enregistrement, codes d'association, partage et activation.</p></div>
+          <div class="actions-entete"><button class="bouton primaire" data-nouvelle-canne><svg class="ic"><use href="#i-plus"/></svg>Enregistrer une canne</button></div>
+        </div>
+        <div class="carte">
+          <div class="titre-carte" style="padding-bottom:10px"><div class="recherche" style="flex:1;max-width:360px"><svg class="ic"><use href="#i-loupe"/></svg><input type="search" id="recherche-cannes" placeholder="Rechercher une canne ou une personne" aria-label="Rechercher une canne"></div></div>
+          <div class="table-defilante">
+            <table>
+              <thead><tr><th>Canne</th><th>État</th><th>Batterie</th><th>Proches</th><th>Code</th><th class="droite">Actions</th></tr></thead>
+              <tbody id="table-cannes"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Utilisateurs (proches) ----------------------------------------------- -->
+      <section data-panneau="utilisateurs" hidden>
+        <div class="entete">
+          <div><h1>Utilisateurs</h1><p class="sous">Proches aidants et cannes qu'ils suivent.</p></div>
+          <div class="actions-entete"><button class="bouton primaire" data-nouveau-compte="proche"><svg class="ic"><use href="#i-plus"/></svg>Créer un compte</button></div>
+        </div>
+        <div class="carte table-defilante">
+          <table>
+            <thead><tr><th>Nom</th><th>Téléphone</th><th>Cannes suivies</th><th>État</th><th>Inscrit le</th><th class="droite">Actions</th></tr></thead>
+            <tbody id="table-utilisateurs"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Zones ----------------------------------------------------------------- -->
+      <section data-panneau="zones" hidden>
+        <div class="entete">
+          <div><h1>Zones dangereuses</h1><p class="sous">Touchez la carte pour créer une zone. Une alerte est envoyée aux proches à chaque entrée.</p></div>
+        </div>
+        <div class="disposition-carte">
+          <div class="carte colonne-liste">
+            <div class="tete-liste">
+              <label>Canne<select id="zones-canne"></select></label>
+              <h2 id="zones-titre">Zones</h2>
+            </div>
+            <div class="liste defilante" id="liste-zones"></div>
+          </div>
+          <div class="carte cadre-carte"><div id="carte-zones" class="carte-leaflet"></div></div>
+        </div>
+      </section>
+
+      <!-- Historique ------------------------------------------------------------ -->
+      <section data-panneau="historique" hidden>
+        <div class="entete">
+          <div><h1>Historique</h1><p class="sous">Trajets et événements d'une canne pour un jour donné.</p></div>
+          <div class="actions-entete">
+            <label style="min-width:240px">Canne<select id="hist-canne"></select></label>
+            <label>Jour<input type="date" id="hist-jour"></label>
+          </div>
+        </div>
+        <div class="disposition-carte">
+          <div class="carte"><div class="contenu" style="padding-top:16px;display:flex;flex-direction:column;gap:14px">
+            <div class="resume" id="hist-resume"></div>
+            <h2 style="font-size:15px">Chronologie</h2>
+            <ol class="chronologie" id="hist-chrono"></ol>
+          </div></div>
+          <div class="carte" style="overflow:hidden"><div id="carte-historique" class="carte-leaflet"></div></div>
+        </div>
+      </section>
+
+      <!-- Alertes --------------------------------------------------------------- -->
+      <section data-panneau="alertes" hidden>
+        <div class="entete">
+          <div><h1>Alertes</h1><p class="sous">Incidents remontés par les cannes et par la surveillance du serveur.</p></div>
+          <div class="actions-entete"><button class="bouton" data-actualiser="alertes"><svg class="ic"><use href="#i-actualiser"/></svg>Actualiser</button></div>
+        </div>
+        <div class="carte">
+          <div class="outils" style="padding-top:14px">
+            <div class="puces" id="filtres-alertes">
+              <button class="puce" data-filtre="a-traiter" aria-pressed="true">À traiter</button>
+              <button class="puce" data-filtre="toutes" aria-pressed="false">Toutes</button>
+              <button class="puce" data-filtre="urgentes" aria-pressed="false">SOS et chutes</button>
+            </div>
+          </div>
+          <div class="table-defilante">
+            <table>
+              <thead><tr><th>Type</th><th>Canne</th><th>Détail</th><th>Date</th><th>État</th><th class="droite">Actions</th></tr></thead>
+              <tbody id="table-alertes"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Maintenance ----------------------------------------------------------- -->
+      <section data-panneau="maintenance" hidden>
+        <div class="entete"><div><h1>Maintenance</h1><p class="sous">Batterie, connexion et état de service des boîtiers.</p></div></div>
+        <div class="grille-cartes" id="grille-maintenance"></div>
+      </section>
+
+      <!-- Administrateurs ------------------------------------------------------- -->
+      <section data-panneau="administrateurs" hidden>
+        <div class="entete">
+          <div><h1>Administrateurs</h1><p class="sous">Comptes ayant accès à cette console. Le dernier administrateur actif ne peut pas être retiré.</p></div>
+          <div class="actions-entete"><button class="bouton primaire" data-nouveau-compte="admin"><svg class="ic"><use href="#i-plus"/></svg>Ajouter un administrateur</button></div>
+        </div>
+        <div class="carte table-defilante">
+          <table>
+            <thead><tr><th>Nom</th><th>Téléphone</th><th>État</th><th>Créé le</th><th class="droite">Actions</th></tr></thead>
+            <tbody id="table-admins"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Simulateur ------------------------------------------------------------ -->
+      <section data-panneau="simulateur" hidden>
+        <div class="entete"><div><h1>Simulateur de canne <span class="badge avert">Démonstration</span></h1>
+          <p class="sous">Il appelle l'API <code>/api/dispositif</code> avec la clé secrète de la canne, exactement comme le boîtier GPS.</p></div></div>
+        <div class="grille-sim">
+          <div class="carte" style="padding:18px">
+            <label>Canne simulée<select id="sim-canne"></select></label>
+            <div class="groupe">
+              <h3>Déplacement</h3>
+              <button class="bouton primaire" id="sim-promenade">Promenade vers une zone à éviter</button>
+              <button class="bouton" id="sim-pause" disabled>Arrêter</button>
+              <button class="bouton" id="sim-domicile">Retour au point de départ</button>
+              <label>Vitesse
+                <select id="sim-vitesse">
+                  <option value="2000">Réaliste (1 point / 2 s)</option>
+                  <option value="600" selected>Rapide (démonstration)</option>
+                  <option value="300">Très rapide</option>
+                </select>
+              </label>
+              <p class="aide">Astuce : cliquez sur la carte pour « téléporter » la canne.</p>
+            </div>
+            <div class="groupe">
+              <h3>Événements</h3>
+              <button class="bouton danger" id="sim-sos">Déclencher un SOS</button>
+              <button class="bouton avert" id="sim-chute">Simuler une chute</button>
+              <button class="bouton" id="sim-batterie-faible">Batterie faible (15 %)</button>
+              <button class="bouton" id="sim-batterie-pleine">Recharger (100 %)</button>
+            </div>
+          </div>
+          <div class="carte carte-sim">
+            <div id="sim-carte" class="carte-leaflet"></div>
+            <div id="sim-journal" class="sim-journal" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Journal --------------------------------------------------------------- -->
+      <section data-panneau="journal" hidden>
+        <div class="entete">
+          <div><h1>Journal</h1><p class="sous">Actions sensibles, SMS et notifications émis par le serveur.</p></div>
+          <div class="actions-entete"><button class="bouton" data-actualiser="journal"><svg class="ic"><use href="#i-actualiser"/></svg>Actualiser</button></div>
+        </div>
+        <div class="carte">
+          <div class="onglets-internes" style="padding-top:14px" id="onglets-journal">
+            <button class="puce" data-vue="audit" aria-pressed="true">Audit</button>
+            <button class="puce" data-vue="sms" aria-pressed="false">SMS <span id="mode-sms"></span></button>
+            <button class="puce" data-vue="notifications" aria-pressed="false">Notifications push <span id="mode-push"></span></button>
+          </div>
+          <div class="table-defilante" id="vue-journal"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Boîte de dialogue générique -->
+  <dialog id="dialogue">
+    <form method="dialog" id="form-dialogue" novalidate>
+      <h3 id="dialogue-titre"></h3>
+      <div id="dialogue-corps"></div>
+      <p class="erreur" id="dialogue-erreur" role="alert" hidden></p>
+      <div class="actions">
+        <button class="bouton" value="annuler" formnovalidate>Annuler</button>
+        <button class="bouton primaire" value="valider" id="dialogue-valider">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/commun/carte-google.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

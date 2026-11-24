@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Canne virtuelle · Canne Proche</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap">
+  <style>
+    :root {
+      --primaire: #4338CA; --primaire-doux: #EEF0FF; --encre: #0F172A; --texte-2: #475569;
+      --fond: #F5F6FA; --surface: #FFFFFF; --bordure: #E2E8F0;
+      --ok: #15803D; --ok-fond: #DCFCE7; --ok-texte: #166534;
+      --avert: #C2410C; --avert-fond: #FFEDD5; --avert-texte: #9A3412;
+      --crit: #B91C1C; --crit-fond: #FEE2E2; --crit-texte: #991B1B;
+      --titre: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; }
+    body { font: 16px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--encre); background: var(--fond);
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); min-height: 100vh; }
+    h1, h2 { font-family: var(--titre); margin: 0; letter-spacing: -.01em; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 3px solid #A5B4FC; outline-offset: 2px; }
+    .page { max-width: 520px; margin: 0 auto; padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 14px; }
+    .entete { display: flex; align-items: center; gap: 12px; padding: 4px 0 6px; }
+    .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--primaire); color: #fff; display: grid; place-items: center; font: 800 15px var(--titre); flex: none; }
+    .entete .titre { flex: 1; min-width: 0; }
+    .entete strong { display: block; font: 800 17px var(--titre); }
+    .entete small { color: var(--texte-2); font-size: 13px; }
+    .carte { background: var(--surface); border: 1px solid var(--bordure); border-radius: 20px; padding: 18px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+    input { font: 600 18px Inter, system-ui, sans-serif; color: var(--encre); border: 1.5px solid var(--bordure); border-radius: 14px;
+      min-height: 54px; padding: 0 14px; width: 100%; background: #fff; text-transform: uppercase; letter-spacing: .04em; }
+    input:focus { outline: none; border-color: var(--primaire); box-shadow: 0 0 0 3px #E0E7FF; }
+    .aide { color: var(--texte-2); font-size: 14px; margin: 0; }
+    .bouton { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 20px;
+      border-radius: 16px; border: 1.5px solid var(--bordure); background: #fff; color: var(--encre); font: 700 16px Inter, sans-serif;
+      cursor: pointer; width: 100%; }
+    .bouton:disabled { opacity: .55; cursor: not-allowed; }
+    .bouton.primaire { background: var(--primaire); border-color: var(--primaire); color: #fff; }
+    .bouton.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .bouton.arret { background: var(--encre); border-color: var(--encre); color: #fff; }
+    .bouton.discret { border-color: transparent; background: transparent; color: var(--texte-2); min-height: 44px; width: auto; padding: 0 10px; font-size: 14px; }
+    .message { border-radius: 14px; padding: 12px 14px; font-weight: 600; font-size: 14px; margin: 0; }
+    .message.erreur { background: var(--crit-fond); color: var(--crit-texte); }
+    .message.avert { background: var(--avert-fond); color: var(--avert-texte); }
+    .message.ok { background: var(--ok-fond); color: var(--ok-texte); }
+    .formulaire { display: flex; flex-direction: column; gap: 14px; }
+
+    .etat { display: flex; align-items: center; gap: 14px; }
+    .voyant { width: 18px; height: 18px; border-radius: 50%; background: #94A3B8; flex: none; position: relative; }
+    .voyant.actif { background: #16A34A; }
+    .voyant.actif::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid #16A34A; opacity: .5; animation: pulse 1.6s ease-out infinite; }
+    .voyant.attente { background: #EA580C; }
+    .voyant.erreur { background: var(--crit); }
+    @keyframes pulse { from { transform: scale(.6); opacity: .7; } to { transform: scale(1.5); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .voyant.actif::after { animation: none; } }
+    .etat h2 { font-size: 20px; }
+    .etat p { margin: 0; color: var(--texte-2); font-size: 14px; }
+    .tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .tuile { background: var(--fond); border-radius: 14px; padding: 10px 12px; }
+    .tuile span { display: block; font-size: 12px; color: var(--texte-2); }
+    .tuile strong { font: 800 19px var(--titre); font-variant-numeric: tabular-nums; }
+    .coords { margin-top: 10px; font: 13px ui-monospace, Menlo, monospace; color: var(--texte-2); text-align: center; }
+
+    .zone-sos { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 18px; }
+    .sos { width: 168px; height: 168px; border-radius: 50%; border: 0; background: var(--crit); color: #fff; font: 800 36px var(--titre);
+      cursor: pointer; position: relative; box-shadow: 0 0 0 10px var(--crit-fond); touch-action: none; user-select: none; -webkit-user-select: none; }
+    .sos:disabled { opacity: .5; }
+    .sos svg { position: absolute; inset: -10px; width: 188px; height: 188px; transform: rotate(-90deg); pointer-events: none; }
+    .sos circle { fill: none; stroke: #fff; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 565; stroke-dashoffset: 565; }
+    .sos small { display: block; font: 600 13px Inter, sans-serif; opacity: .9; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+
+    .journal { max-height: 220px; overflow-y: auto; font: 12px/1.6 ui-monospace, Menlo, monospace; background: var(--encre); color: #CBD5E1;
+      border-radius: 16px; padding: 12px 14px; }
+    .journal .e { color: #FCA5A5; } .journal .o { color: #86EFAC; }
+    details summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+    details ul { margin: 8px 0 0; padding-left: 20px; color: var(--texte-2); font-size: 14px; }
+    details li { margin-bottom: 6px; }
+    code { background: var(--fond); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="entete">
+      <span class="logo" aria-hidden="true">CP</span>
+      <div class="titre"><strong>Canne virtuelle</strong><small id="sous-titre">Ce téléphone remplace la canne pendant les tests</small></div>
+      <button class="bouton discret" id="desactiver" hidden>Dissocier</button>
+    </header>
+
+    <p class="message avert" id="alerte-https" role="alert" hidden>
+      Le GPS du navigateur n'est autorisé que sur une adresse sécurisée (<strong>https://</strong>) ou sur ce PC (localhost).
+      Ouvrez cette page via un tunnel HTTPS ou le serveur en ligne (voir le README).
+    </p>
+
+    <!-- Activation ---------------------------------------------------------------->
+    <section class="carte" id="ecran-activation" hidden>
+      <form class="formulaire" id="form-activation" novalidate>
+        <div>
+          <h1 style="font-size:24px">Activer ce téléphone</h1>
+          <p class="aide" style="margin-top:6px">Saisissez l'identifiant de la canne et le <strong>code d'activation</strong> affichés dans la console d'administration
+            (Cannes intelligentes › Brancher un appareil).</p>
+        </div>
+        <label>Identifiant de la canne (Cane ID)
+          <input name="identifiant" autocomplete="off" autocapitalize="characters" placeholder="CANNE-0001" required>
+        </label>
+        <label>Code d'activation
+          <input name="code" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX" required>
+        </label>
+        <p class="message erreur" id="erreur-activation" role="alert" hidden></p>
+        <button class="bouton primaire" type="submit">Activer et devenir la canne</button>
+        <p class="aide">Le téléphone enverra ensuite sa vraie position GPS au serveur, exactement comme le fera le boîtier de la canne.</p>
+      </form>
+    </section>
+
+    <!-- Émission ------------------------------------------------------------------>
+    <div id="ecran-emission" hidden style="display:flex;flex-direction:column;gap:14px">
+      <section class="carte" aria-live="polite">
+        <div class="etat">
+          <span class="voyant" id="voyant" aria-hidden="true"></span>
+          <div style="flex:1;min-width:0"><h2 id="etat-titre">Émission arrêtée</h2><p id="etat-detail">Touchez « Démarrer » pour envoyer la position.</p></div>
+        </div>
+        <div class="tuiles">
+          <div class="tuile"><span>Précision GPS</span><strong id="t-precision">—</strong></div>
+          <div class="tuile"><span>Batterie</span><strong id="t-batterie">—</strong></div>
+          <div class="tuile"><span>Positions envoyées</span><strong id="t-envoyees">0</strong></div>
+          <div class="tuile"><span>Dernier envoi</span><strong id="t-dernier">—</strong></div>
+        </div>
+        <div class="coords" id="coords">Position inconnue</div>
+      </section>
+
+      <p class="message avert" id="message-file" hidden></p>
+      <p class="message erreur" id="message-erreur" role="alert" hidden></p>
+
+      <button class="bouton ok" id="basculer">Démarrer l'émission</button>
+
+      <section class="carte zone-sos">
+        <button class="sos" id="sos" aria-describedby="aide-sos">
+          <svg viewBox="0 0 188 188" aria-hidden="true"><circle cx="94" cy="94" r="90" id="anneau-sos"></circle></svg>
+          SOS<small>Maintenir 2 s</small>
+        </button>
+        <p class="aide" id="aide-sos" style="text-align:center">Comme le bouton de la canne : les proches reçoivent une alerte SOS avec la position.</p>
+        <div class="actions">
+          <button class="bouton" id="chute">Simuler une chute</button>
+          <button class="bouton" id="vie">Envoyer un signe de vie</button>
+        </div>
+      </section>
+
+      <details class="carte">
+        <summary>Conseils pour un test réaliste</summary>
+        <ul>
+          <li>Testez dehors : à l'intérieur, la précision GPS se dégrade (les positions de plus de <span id="seuil-precision">80</span> m d'imprécision ne déclenchent pas d'alerte de zone).</li>
+          <li>Laissez cette page ouverte et l'écran allumé (le verrouillage automatique est empêché tant que l'émission est active).</li>
+          <li>Pour émettre <strong>écran éteint</strong> pendant longtemps, utilisez l'application gratuite <strong>Traccar Client</strong> (réglages dans la console).</li>
+          <li>Sans réseau, les positions sont gardées et envoyées au retour de la connexion.</li>
+        </ul>
+      </details>
+
+      <section>
+        <h2 style="font-size:15px;margin:0 0 8px">Journal</h2>
+        <div class="journal" id="journal" aria-live="off"></div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  const $ = (s) => document.querySelector(s);
+  const CLE_STOCKAGE = 'canne_virtuelle_v1';
+  const CLE_FILE = 'canne_virtuelle_file_v1';
+  const MAX_FILE = 2000;
+
+  // --- Stockage local ---------------------------------------------------------
+  const stock = {
+    lire(cle, defaut) { try { return JSON.parse(localStorage.getItem(cle)) ?? defaut; } catch { return defaut; } },
+    ecrire(cle, val) { try { localStorage.setItem(cle, JSON.stringify(val)); } catch { /* stockage plein ou privé */ } },
+    effacer(cle) { try { localStorage.removeItem(cle); } catch { /* ignoré */ } },
+  };
+
+  let config = stock.lire(CLE_STOCKAGE, null); // {cle, canne, reglages}
+  let file = stock.lire(CLE_FILE, []);           // positions pas encore envoyées
+
+  const etat = {
+    emission: false, idSuivi: null, minuteurEnvoi: null, minuteurVie: null, verrou: null,
+    dernierFix: null, dernierEnvoyeHorodatage: null, dernierEnvoi: null, envoyees: 0,
+    batterie: null, envoiEnCours: false, erreurReseau: false,
+  };
+
+  // --- Journal ----------------------------------------------------------------
+  function journal(texte, classe = '') {
+    const el = document.createElement('div');
+    if (classe) el.className = classe;
+    el.textContent = `${new Date().toLocaleTimeString('fr-FR')}  ${texte}`;
+    const j = $('#journal');
+    j.prepend(el);
+    while (j.children.length > 80) j.lastChild.remove();
+  }
+
+  // --- Affichage ----------------------------------------------------------------
+  function afficherErreur(texte) {
+    const el = $('#message-erreur');
+    el.hidden = !texte;
+    el.textContent = texte || '';
+  }
+
+  function majEtat() {
+    const voyant = $('#voyant');
+    let titre, detail, classe;
+    if (!etat.emission) {
+      [titre, detail, classe] = ['Émission arrêtée', 'Touchez « Démarrer » pour envoyer la position.', ''];
+    } else if (!etat.dernierFix) {
+      [titre, detail, classe] = ['Recherche du GPS…', 'Autorisez la localisation et placez-vous à l\'extérieur.', 'attente'];
+    } else if (etat.erreurReseau) {
+      [titre, detail, classe] = ['Réseau indisponible', 'Les positions sont gardées et seront envoyées dès le retour du réseau.', 'attente'];
+    } else {
+      [titre, detail, classe] = ['En émission', `Position envoyée toutes les ${config.reglages.intervallePositionS} s.`, 'actif'];
+    }
+    $('#etat-titre').textContent = titre;
+    $('#etat-detail').textContent = detail;
+    voyant.className = 'voyant ' + classe;
+    const f = etat.dernierFix;
+    $('#t-precision').textContent = f ? `± ${Math.round(f.precision)} m` : '—';
+    $('#t-batterie').textContent = etat.batterie == null ? 'inconnue' : `${etat.batterie} %`;
+    $('#t-envoyees').textContent = etat.envoyees;
+    $('#t-dernier').textContent = etat.dernierEnvoi ? ilYa(etat.dernierEnvoi) : '—';
+    $('#coords').textContent = f ? `${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}` : 'Position inconnue';
+    const enAttente = file.length;
+    $('#message-file').hidden = enAttente === 0;
+    $('#message-file').textContent = `${enAttente} position(s) en attente d'envoi.`;
+    const b = $('#basculer');
+    b.textContent = etat.emission ? 'Arrêter l\'émission' : 'Démarrer l\'émission';
+    b.className = 'bouton ' + (etat.emission ? 'arret' : 'ok');
+  }
+
+  function ilYa(t) {
+    const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (s < 60) return `${s} s`;
+    return `${Math.round(s / 60)} min`;
+  }
+
+  // --- API ----------------------------------------------------------------------
+  class ErreurApi extends Error {
+    constructor(message, statut, code) { super(message); this.statut = statut; this.code = code; }
+  }
+
+  async function api(chemin, corps, { avecCle = true } = {}) {
+    let r;
+    try {
+      r = await fetch(chemin, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(avecCle ? { 'X-Cle-Dispositif': config.cle, 'X-Source-Dispositif': 'telephone' } : {}),
+        },
+        body: JSON.stringify(corps || {}),
+      });
+    } catch {
+      throw new ErreurApi('Serveur injoignable.', 0);
+    }
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new ErreurApi(json.message || `Erreur ${r.status}`, r.status, json.code);
+    return json;
+  }
+
+  /** La clé n'est plus valable (régénérée) ou la canne est désactivée : on s'arrête. */
+  function traiterRefus(e) {
+    if (e.statut === 401) {
+      arreter();
+      journal('clé refusée : ce téléphone doit être réactivé', 'e');
+      dissocier('La clé de ce téléphone a été remplacée dans la console. Réactivez-le avec le nouveau code.');
+      return true;
+    }
+    if (e.statut === 403) {
+      arreter();
+      afficherErreur('La canne est désactivée par l\'administrateur : l\'émission est arrêtée.');
+      journal('canne désactivée par l\'administrateur', 'e');
+      return true;
+    }
+    return false;
+  }
+
+  // --- Activation -------------------------------------------------------------------
+  $('#form-activation').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const bouton = form.querySelector('button[type=submit]');
+    const err = $('#erreur-activation');
+    err.hidden = true;
+    const identifiant = form.identifiant.value.trim();
+    const code = form.code.value.trim();
+    if (identifiant.length < 3 || code.replace(/[^A-Za-z0-9]/g, '').length < 8) {
+      err.textContent = 'Saisissez l\'identifiant (ex. CANNE-0001) et le code d\'activation à 8 caractères.';
+      err.hidden = false;
+      return;
+    }
+    bouton.disabled = true;
+    bouton.textContent = 'Activation…';
+    try {
+      const r = await api('/api/dispositif/activer', {
+        identifiant, codeActivation: code, type: 'telephone', appareil: navigator.userAgent.slice(0, 120),
+      }, { avecCle: false });
+      config = { cle: r.cle, canne: r.canne, reglages: r.reglages };
+      stock.ecrire(CLE_STOCKAGE, config);
+      afficherEmission();
+      journal(`téléphone activé pour ${r.canne.identifiant} (${r.canne.nom})`, 'o');
+    } catch (ex) {
+      err.textContent = ex.statut === 0 ? 'Serveur injoignable. Vérifiez le réseau et l\'adresse de la page.' : ex.message;
+      err.hidden = false;
+    } finally {
+      bouton.disabled = false;
+      bouton.textContent = 'Activer et devenir la canne';
+    }
+  });
+
+  function dissocier(message) {
+    arreter();
+    config = null;
+    stock.effacer(CLE_STOCKAGE);
+    file = [];
+    stock.effacer(CLE_FILE);
+    afficherActivation();
+    if (message) {
+      $('#erreur-activation').textContent = message;
+      $('#erreur-activation').hidden = false;
+    }
+  }
+
+  $('#desactiver').addEventListener('click', () => {
+    if (confirm('Dissocier ce téléphone de la canne ? Il n\'enverra plus de position.')) dissocier();
+  });
+
+  // --- Batterie et écran allumé -------------------------------------------------------
+  async function suivreBatterie() {
+    if (!navigator.getBattery) return;
+    try {
+      const b = await navigator.getBattery();
+      const maj = () => { etat.batterie = Math.round(b.level * 100); majEtat(); };
+      maj();
+      b.addEventListener('levelchange', maj);
+    } catch { /* non disponible */ }
+  }
+
+  async function garderEcranAllume() {
+    if (!('wakeLock' in navigator) || !etat.emission) return;
+    try {
+      etat.verrou = await navigator.wakeLock.request('screen');
+    } catch { /* refusé (économie d'énergie) */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      garderEcranAllume();
+      if (etat.emission) envoyer();
+    } else if (etat.emission) {
+      journal('page masquée : le navigateur peut suspendre le GPS', 'e');
+    }
+  });
+
+  // --- GPS et envoi ----------------------------------------------------------------------
+  function surPosition(p) {
+    const premier = !etat.dernierFix;
+    etat.dernierFix = {
+      latitude: p.coords.latitude,
+      longitude: p.coords.longitude,
+      precision: p.coords.accuracy,
+      horodatage: new Date(p.timestamp || Date.now()).toISOString(),
+    };
+    afficherErreur('');
+    if (premier) {
+      journal(`GPS trouvé (± ${Math.round(p.coords.accuracy)} m)`, 'o');
+      mettreEnFile();
+      envoyer();
+    }
+    majEtat();
+  }
+
+  function surErreurGps(e) {
+    const messages = {
+      1: 'Localisation refusée. Autorisez-la dans les réglages du navigateur pour ce site.',
+      2: 'Position indisponible : activez le GPS du téléphone.',
+      3: 'Le GPS met trop de temps à répondre. Placez-vous à l\'extérieur.',
+    };
+    afficherErreur(messages[e.code] || 'Erreur GPS.');
+    journal(`erreur GPS : ${messages[e.code] || e.message}`, 'e');
+    if (e.code === 1) arreter();
+  }
+
+  /** Ajoute la dernière position à la file si elle n'y est pas déjà. */
+  function mettreEnFile() {
+    const f = etat.dernierFix;
+    if (!f || f.horodatage === etat.dernierEnvoyeHorodatage) return;
+    etat.dernierEnvoyeHorodatage = f.horodatage;
+    file.push({ ...f, ...(etat.batterie != null ? { batterie: etat.batterie } : {}) });
+    if (file.length > MAX_FILE) file = file.slice(-MAX_FILE);
+    stock.ecrire(CLE_FILE, file);
+  }
+
+  /** Envoie toute la file d'attente en un lot (500 positions au plus par requête). */
+  async function envoyer() {
+    if (etat.envoiEnCours || !file.length || !config) return;
+    etat.envoiEnCours = true;
+    const lot = file.slice(0, 500);
+    try {
+      const r = await api('/api/dispositif/positions', { positions: lot });
+      file = file.slice(lot.length);
+      stock.ecrire(CLE_FILE, file);
+      etat.envoyees += lot.length;
+      etat.dernierEnvoi = Date.now();
+      if (etat.erreurReseau) journal(`réseau rétabli : ${lot.length} position(s) envoyée(s)`, 'o');
+      etat.erreurReseau = false;
+      const d = lot[lot.length - 1];
+      journal(`position envoyée ${d.latitude.toFixed(5)}, ${d.longitude.toFixed(5)} (± ${Math.round(d.precision)} m)`);
+      for (const a of r.alertes || []) {
+        journal(`ALERTE créée par le serveur : ${a.type === 'entree_zone' ? 'entrée dans « ' + (a.zoneNom || 'zone') + ' »' : a.type}`, 'e');
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      }
+    } catch (e) {
+      if (!traiterRefus(e)) {
+        if (!etat.erreurReseau) journal(`envoi impossible (${e.message}) : positions gardées`, 'e');
+        etat.erreurReseau = e.statut === 0 || e.statut >= 500;
+        if (e.statut === 422) { // position refusée par la validation : on l'écarte
+          file = file.slice(lot.length);
+          stock.ecrire(CLE_FILE, file);
+        }
+      }
+    } finally {
+      etat.envoiEnCours = false;
+      majEtat();
+    }
+  }
+
+  async function signeDeVie(manuel = false) {
+    try {
+      await api('/api/dispositif/battement', etat.batterie != null ? { batterie: etat.batterie } : {});
+      if (manuel) journal('signe de vie envoyé', 'o');
+    } catch (e) {
+      if (!traiterRefus(e) && manuel) journal(`signe de vie impossible : ${e.message}`, 'e');
+    }
+  }
+
+  function demarrer() {
+    if (!navigator.geolocation) {
+      afficherErreur('Ce navigateur ne permet pas la géolocalisation.');
+      return;
+    }
+    afficherErreur('');
+    etat.emission = true;
+    etat.idSuivi = navigator.geolocation.watchPosition(surPosition, surErreurGps, {
+      enableHighAccuracy: true, maximumAge: 0, timeout: 30000,
+    });
+    const intervalle = (config.reglages?.intervallePositionS || 5) * 1000;
+    etat.minuteurEnvoi = setInterval(() => { mettreEnFile(); envoyer(); majEtat(); }, intervalle);
+    etat.minuteurVie = setInterval(() => signeDeVie(), (config.reglages?.intervalleBattementS || 30) * 1000);
+    garderEcranAllume();
+    signeDeVie();
+    journal('émission démarrée', 'o');
+    majEtat();
+  }
+
+  function arreter() {
+    if (etat.idSuivi != null) navigator.geolocation.clearWatch(etat.idSuivi);
+    clearInterval(etat.minuteurEnvoi);
+    clearInterval(etat.minuteurVie);
+    etat.idSuivi = null;
+    if (etat.verrou) etat.verrou.release().catch(() => {});
+    etat.verrou = null;
+    if (etat.emission) journal('émission arrêtée');
+    etat.emission = false;
+    majEtat();
+  }
+
+  $('#basculer').addEventListener('click', () => (etat.emission ? arreter() : demarrer()));
+
+  // --- Alertes de la canne -----------------------------------------------------------------
+  async function alerte(type) {
+    const f = etat.dernierFix;
+    try {
+      await api('/api/dispositif/alertes', { type, ...(f ? { latitude: f.latitude, longitude: f.longitude } : {}) });
+      journal(type === 'sos' ? 'SOS ENVOYÉ aux proches' : 'chute signalée aux proches', 'e');
+      if (navigator.vibrate) navigator.vibrate([400, 150, 400]);
+      afficherErreur('');
+      const m = $('#message-file');
+      m.hidden = false;
+      m.className = 'message ok';
+      m.textContent = type === 'sos' ? 'SOS envoyé. Les proches sont alertés.' : 'Chute signalée aux proches.';
+      setTimeout(() => { m.className = 'message avert'; majEtat(); }, 5000);
+    } catch (e) {
+      if (!traiterRefus(e)) afficherErreur(`Envoi impossible : ${e.message}`);
+    }
+  }
+
+  // SOS : appui maintenu 2 secondes (évite les déclenchements involontaires).
+  const DUREE_SOS = 2000;
+  const anneau = $('#anneau-sos');
+  let debutSos = null;
+  let animationSos = null;
+  function animerSos() {
+    const p = Math.min(1, (performance.now() - debutSos) / DUREE_SOS);
+    anneau.style.strokeDashoffset = String(565 * (1 - p));
+    if (p >= 1) { finSos(true); return; }
+    animationSos = requestAnimationFrame(animerSos);
+  }
+  function debutAppuiSos(e) {
+    e.preventDefault();
+    if (debutSos != null) return;
+    debutSos = performance.now();
+    animationSos = requestAnimationFrame(animerSos);
+  }
+  function finSos(declenche = false) {
+    if (debutSos == null) return;
+    cancelAnimationFrame(animationSos);
+    debutSos = null;
+    anneau.style.strokeDashoffset = '565';
+    if (declenche) alerte('sos');
+  }
+  const boutonSos = $('#sos');
+  boutonSos.addEventListener('pointerdown', debutAppuiSos);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => boutonSos.addEventListener(t, () => finSos(false)));
+  boutonSos.addEventListener('contextmenu', (e) => e.preventDefault());
+  // Clavier / lecteur d'écran : confirmation explicite.
+  boutonSos.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && confirm('Envoyer un SOS aux proches ?')) { e.preventDefault(); alerte('sos'); }
+  });
+
+  $('#chute').addEventListener('click', () => {
+    if (confirm('Signaler une chute aux proches ?')) alerte('chute');
+  });
+  $('#vie').addEventListener('click', () => signeDeVie(true));
+
+  // --- Écrans ---------------------------------------------------------------------------
+  function afficherActivation() {
+    $('#ecran-activation').hidden = false;
+    $('#ecran-emission').hidden = true;
+    $('#desactiver').hidden = true;
+    $('#sous-titre').textContent = 'Ce téléphone remplace la canne pendant les tests';
+    // Pré-remplissage par lien : /canne/?id=CANNE-0001&code=XXXX-XXXX
+    const q = new URLSearchParams(location.search);
+    if (q.get('id')) $('#form-activation').identifiant.value = q.get('id');
+    if (q.get('code')) $('#form-activation').code.value = q.get('code');
+  }
+
+  function afficherEmission() {
+    $('#ecran-activation').hidden = true;
+    $('#ecran-emission').hidden = false;
+    $('#desactiver').hidden = false;
+    $('#sous-titre').textContent = `${config.canne.nom} · ${config.canne.identifiant}`;
+    if (config.reglages?.precisionMaxZoneM) $('#seuil-precision').textContent = config.reglages.precisionMaxZoneM;
+    majEtat();
+  }
+
+  if (!window.isSecureContext) $('#alerte-https').hidden = false;
+  suivreBatterie();
+  setInterval(majEtat, 1000);
+  window.addEventListener('online', () => { if (etat.emission) envoyer(); });
+  if (config?.cle) {
+    afficherEmission();
+    if (file.length) journal(`${file.length} position(s) en attente depuis la dernière session`);
+  } else {
+    afficherActivation();
+  }
+})();
+</script>
+</body>
+</html>
